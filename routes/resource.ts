@@ -62,7 +62,7 @@ router.all(
         data: req.body,
       });
 
-      res.json(resp.data);
+      res.status(resp.status).json(resp.data);
     } catch (error) {
       if (error instanceof AxiosError)
         return res.status(error.response?.status || 500).json(

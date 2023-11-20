@@ -29,7 +29,11 @@ router.all("/:route", async (req, res) => {
       const respData = resp.data;
 
       if (route === "logout") {
-        return res.clearCookie("rt").clearCookie("at").json({ error: false });
+        return res
+          .status(resp.status)
+          .clearCookie("rt")
+          .clearCookie("at")
+          .json({ error: false });
       } else if (
         !respData.error &&
         respData.accessToken &&
@@ -47,9 +51,10 @@ router.all("/:route", async (req, res) => {
             secure: true,
             maxAge: 10 * 60 * 1000, // 10 min in ms
           })
+          .status(resp.status)
           .json({ error: false });
       } else {
-        return res.json(respData);
+        return res.status(resp.status).json(respData);
       }
     } else {
       return res
@@ -58,10 +63,12 @@ router.all("/:route", async (req, res) => {
     }
   } catch (error: unknown) {
     if (error instanceof AxiosError)
-      return res.status(400).json({
-        error: true,
-        message: error.message,
-      });
+      return res.status(error.response?.status || 500).json(
+        error.response?.data || {
+          error: true,
+          message: "Axios: " + error.message,
+        }
+      );
     else return res.sendStatus(500);
   }
 });
