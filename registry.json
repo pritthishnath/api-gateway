@@ -1,7 +1,7 @@
 {
   "services": {
     "auth": {
-      "url": "https://accounts.pnath.in",
+      "url": "https://auth.pnath.in",
       "endpoints": {
         "login": { "url": "/login" },
         "register": { "url": "/register" },
