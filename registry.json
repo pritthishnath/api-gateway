@@ -1,7 +1,7 @@
 {
   "services": {
     "auth": {
-      "url": "http://localhost:3102",
+      "url": "https://accounts.pnath.in",
       "endpoints": {
         "login": { "url": "/login" },
         "register": { "url": "/register" },
@@ -13,7 +13,7 @@
     },
     "resources": {
       "keeper": {
-        "url": "http://localhost:3110",
+        "url": "https://api.keeper.pnath.in",
         "endpoints": {
           "note": { "url": "/note", "scopes": ["share"] },
           "tag": { "url": "/tag" },
