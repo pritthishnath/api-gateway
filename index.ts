@@ -15,9 +15,13 @@ app.use(
 app.use(
   cors({
     credentials: true,
-    origin: ["http://localhost:5173"],
+    origin: ["http://localhost:5173", "http://localhost:3111"],
   })
 );
+app.use((req, res, next) => {
+  res.header("X-Powered-By", "API Gateway @pnath.in");
+  next();
+});
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());
