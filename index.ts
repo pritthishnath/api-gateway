@@ -18,6 +18,10 @@ app.use(
     origin: ["https://keeper.pnath.in"],
   })
 );
+app.use((req, res, next) => {
+  res.header("X-Powered-By", "API Gateway @pnath.in");
+  next();
+});
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cookieParser());

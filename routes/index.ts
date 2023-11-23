@@ -7,4 +7,8 @@ const router = Router();
 router.use("/auth", authController);
 router.use("/rs", resourceController);
 
+router.get("/", (req, res) => {
+  res.json({ message: "API Gateway running" });
+});
+
 export default router;
