@@ -39,7 +39,6 @@ router.all(
 
       const topic = endpoints.get(topicName) as TopicType;
 
-      console.log(topic);
       if (!topic || topic === undefined)
         return res.status(404).json({ error: true, message: "Invalid URL!" }); // Checking if topic exists
 

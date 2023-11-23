@@ -39,7 +39,6 @@ router.all("/:route", async (req, res) => {
         respData.accessToken &&
         respData.refreshToken
       ) {
-        console.log("TOKEN SENT");
         return res
           .cookie("rt", respData.refreshToken, {
             httpOnly: true,
