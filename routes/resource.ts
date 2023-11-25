@@ -2,6 +2,7 @@ import axios, { AxiosError } from "axios";
 import { Router } from "express";
 import qs, { ParsedUrlQueryInput } from "querystring";
 import registry from "../registry.json";
+import { jsonError } from "../utils";
 
 const router = Router();
 
@@ -27,24 +28,22 @@ router.all(
     const resources = new Map(Object.entries(registry.services.resources));
     const resource = resources.get(resourceName);
     if (!resource || resource === undefined)
-      return res
-        .status(404)
-        .json({ error: true, message: "Resource Not Found!" }); // Getting and checking the resource
+      return jsonError(res, 404, "Resource not found"); // Getting and checking the resource
 
     const qsInput: ParsedUrlQueryInput = {};
     const queryString = qs.stringify(Object.assign(qsInput, req.query));
 
+    const endpoints = new Map(Object.entries(resource.endpoints));
+
+    const topic = endpoints.get(topicName) as TopicType;
+
     try {
-      const endpoints = new Map(Object.entries(resource.endpoints));
-
-      const topic = endpoints.get(topicName) as TopicType;
-
       if (!topic || topic === undefined)
-        return res.status(404).json({ error: true, message: "Invalid URL!" }); // Checking if topic exists
+        return jsonError(res, 404, "Invalid URL!"); // Checking if topic exists
 
       if (scope !== undefined && topic["scopes"] !== undefined) {
         if (!topic["scopes"].includes(scope))
-          return res.status(404).json({ error: true, message: "Invalid URL!" }); // Checking if scope exists
+          return jsonError(res, 404, "Invalid URL!"); // Checking if scope exists
       }
 
       const targetUrl = `${resource.url}${topic.url}${
@@ -67,10 +66,11 @@ router.all(
         return res.status(error.response?.status || 500).json(
           error.response?.data || {
             error: true,
-            message: "Axios: " + error.message,
+            msg: "Axios: " + error.message,
+            errorData: error,
           }
         );
-      else return res.sendStatus(500);
+      else return jsonError(res, 500);
     }
   }
 );

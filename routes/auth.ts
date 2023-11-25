@@ -1,74 +1,86 @@
 import { Router } from "express";
 import axios, { AxiosError } from "axios";
 import registry from "../registry.json";
+import { jsonError } from "../utils";
+import qs, { ParsedUrlQueryInput } from "querystring";
 
 const router = Router();
 
-router.all("/:route", async (req, res) => {
-  const service = registry.services["auth"];
-  const endpoints = new Map(
-    Object.entries(registry.services["auth"].endpoints)
-  );
-  const route = req.params.route;
+type TopicType = {
+  url: string;
+};
+
+router.all(["/:topic/:uniqueId", "/:topic"], async (req, res) => {
+  const { topic: topicName, uniqueId } = req.params;
+
+  const authResource = registry.services["auth"];
+  const endpoints = new Map(Object.entries(authResource.endpoints));
+
+  const qsInput: ParsedUrlQueryInput = {};
+  const queryString = qs.stringify(Object.assign(qsInput, req.query));
+
+  const topic = endpoints.get(topicName) as TopicType;
 
   try {
-    if (route && endpoints.has(route)) {
-      const resp = await axios({
-        method: req.method,
-        url: `${service.url}${endpoints.get(route)?.url}`,
-        headers: {
-          "Content-Type": "application/json",
-          "authorization-token": `${req.cookies["at"]}`,
-        },
-        data: {
-          ...req.body,
-          refreshToken: req.cookies["rt"],
-        },
-      });
+    if (!topic || topic === undefined)
+      return jsonError(res, 404, "Invalid URL!"); // Checking if topic exists
 
-      const respData = resp.data;
+    const targetUrl = `${authResource.url}${topic.url}${
+      uniqueId !== undefined ? "/" + uniqueId : ""
+    }?${queryString}`; // Target URL
 
-      if (route === "logout") {
-        return res
-          .status(resp.status)
-          .clearCookie("rt")
-          .clearCookie("at")
-          .json({ error: false });
-      } else if (
-        !respData.error &&
-        respData.accessToken &&
-        respData.refreshToken
-      ) {
-        return res
-          .cookie("rt", respData.refreshToken, {
-            httpOnly: true,
-            secure: true,
-            maxAge: 10 * 24 * 3600 * 1000, // 10 days in ms
-          })
-          .cookie("at", respData.accessToken, {
-            httpOnly: true,
-            secure: true,
-            maxAge: 10 * 60 * 1000, // 10 min in ms
-          })
-          .status(resp.status)
-          .json({ error: false });
-      } else {
-        return res.status(resp.status).json(respData);
-      }
-    } else {
+    const resp = await axios({
+      method: req.method,
+      url: targetUrl,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization-token": `${req.cookies["at"]}`,
+      },
+      data: {
+        ...req.body,
+        refreshToken: req.cookies["rt"],
+      },
+    });
+
+    const respData = resp.data;
+
+    if (topicName === "logout") {
       return res
-        .status(400)
-        .json({ error: true, message: "Please enter a valid URL!" });
+        .status(resp.status)
+        .clearCookie("rt")
+        .clearCookie("at")
+        .json({ error: false });
+    } else if (
+      !respData.error &&
+      respData.accessToken &&
+      respData.refreshToken
+    ) {
+      return res
+        .cookie("rt", respData.refreshToken, {
+          httpOnly: true,
+          secure: true,
+          maxAge: 10 * 24 * 3600 * 1000, // 10 days in ms
+        })
+        .cookie("at", respData.accessToken, {
+          httpOnly: true,
+          secure: true,
+          maxAge: 10 * 60 * 1000, // 10 min in ms
+        })
+        .status(resp.status)
+        .json({ error: false });
+    } else {
+      return res.status(resp.status).json(respData);
     }
   } catch (error: unknown) {
     if (error instanceof AxiosError)
       return res.status(error.response?.status || 500).json(
         error.response?.data || {
           error: true,
-          message: "Axios: " + error.message,
+          msg: "Axios: " + error.message,
+          errorData: error,
         }
       );
-    else return res.sendStatus(500);
+    else return jsonError(res, 500);
   }
 });
 
