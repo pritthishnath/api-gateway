@@ -1,78 +1,71 @@
+import { Context, Elysia } from "elysia";
 import axios, { AxiosError } from "axios";
-import { Router } from "express";
-import qs, { ParsedUrlQueryInput } from "querystring";
 import registry from "../registry.json";
 import { jsonError } from "../utils";
 
-const router = Router();
+const resourceHandler = async (context: Context) => {
+  const { params, query, request, cookie, set } = context;
+  const { resource: resourceName, topic: topicName, uniqueId, scope } = params;
+  const body = context.body as Record<string, any>;
+  const resources = new Map(Object.entries(registry.services.resources));
+  const resource = resources.get(resourceName);
 
-type TopicType = {
-  url: string;
-  scopes?: string[];
+  if (!resource) {
+    return jsonError(context, 404, "Resource not found");
+  }
+
+  const queryString = new URLSearchParams(
+    query as Record<string, string>
+  ).toString();
+  const endpoints = new Map(Object.entries(resource.endpoints));
+  const topic = endpoints.get(topicName) as {
+    url: string;
+    scopes?: string[];
+  };
+
+  try {
+    if (!topic) {
+      return jsonError(context, 404, "Invalid URL!");
+    }
+
+    if (scope && topic.scopes && !topic.scopes.includes(scope)) {
+      return jsonError(context, 404, "Invalid URL!");
+    }
+
+    const targetUrl = `${resource.url}${topic.url}${
+      uniqueId ? "/" + uniqueId : ""
+    }${scope ? "/" + scope : ""}?${queryString}`;
+
+    const resp = await axios({
+      method: request.method,
+      url: targetUrl,
+      headers: {
+        "Content-Type": "application/json",
+        "authorization-token": cookie.at?.value || "",
+      },
+      data: body,
+    });
+
+    set.status = resp.status;
+    return resp.data;
+  } catch (error) {
+    if (error instanceof AxiosError) {
+      set.status = error.response?.status || 500;
+      return (
+        error.response?.data || {
+          error: true,
+          msg: "Axios: " + error.message,
+          errorData: error,
+        }
+      );
+    }
+    return jsonError(context, 500);
+  }
 };
 
-router.all(
-  [
-    "/:resource/:topic/:uniqueId/:scope",
-    "/:resource/:topic/:uniqueId",
-    "/:resource/:topic",
-  ],
-  async (req, res) => {
-    const {
-      resource: resourceName,
-      topic: topicName,
-      uniqueId,
-      scope,
-    } = req.params;
+const resourceController = new Elysia({ prefix: "/rs" })
+  .all("/:resource/:topic/:uniqueId?/:scope?", resourceHandler) //
+  .all("/:resource/:topic/:uniqueId?", resourceHandler) //
+  .all("/:resource/:topic", resourceHandler); //
 
-    const resources = new Map(Object.entries(registry.services.resources));
-    const resource = resources.get(resourceName);
-    if (!resource || resource === undefined)
-      return jsonError(res, 404, "Resource not found"); // Getting and checking the resource
-
-    const qsInput: ParsedUrlQueryInput = {};
-    const queryString = qs.stringify(Object.assign(qsInput, req.query));
-
-    const endpoints = new Map(Object.entries(resource.endpoints));
-
-    const topic = endpoints.get(topicName) as TopicType;
-
-    try {
-      if (!topic || topic === undefined)
-        return jsonError(res, 404, "Invalid URL!"); // Checking if topic exists
-
-      if (scope !== undefined && topic["scopes"] !== undefined) {
-        if (!topic["scopes"].includes(scope))
-          return jsonError(res, 404, "Invalid URL!"); // Checking if scope exists
-      }
-
-      const targetUrl = `${resource.url}${topic.url}${
-        uniqueId !== undefined ? "/" + uniqueId : ""
-      }${scope !== undefined ? "/" + scope : ""}?${queryString}`; // Target URL
-
-      const resp = await axios({
-        method: req.method,
-        url: targetUrl,
-        headers: {
-          "Content-Type": "application/json",
-          "authorization-token": `${req.cookies.at}`,
-        },
-        data: req.body,
-      });
-
-      res.status(resp.status).json(resp.data);
-    } catch (error) {
-      if (error instanceof AxiosError)
-        return res.status(error.response?.status || 500).json(
-          error.response?.data || {
-            error: true,
-            msg: "Axios: " + error.message,
-            errorData: error,
-          }
-        );
-      else return jsonError(res, 500);
-    }
-  }
-);
-
-export default router;
+export default resourceController;

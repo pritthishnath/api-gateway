@@ -1,42 +1,49 @@
-import dotenv from "dotenv";
-import cookieParser from "cookie-parser";
-import express from "express";
-import cors from "cors";
-import morgan from "morgan";
-import router from "./routes";
+import { Elysia } from "elysia";
+import { cookie } from "@elysiajs/cookie";
+import { cors } from "@elysiajs/cors";
+import authController from "./routes/auth";
+import resourceController from "./routes/resource";
 
-dotenv.config();
-
-const app = express();
+// Load environment variables
 const PORT = process.env.PORT || 3101;
-const NODE_ENV = process.env.NODE_ENV || "staging";
+const NODE_ENV = process.env.NODE_ENV || "development";
 
-app.use(
-  morgan(
-    `${PORT}|API-GATEWAY :method :url :status :response-time ms - :res[content-length]`
+new Elysia()
+  .state("requestStart", 0)
+  .use(cookie())
+  .use(
+    cors({
+      credentials: true,
+      origin:
+        NODE_ENV === "development"
+          ? ["http://localhost:5173", "http://localhost:3111"]
+          : ["https://keeper.pnath.in"],
+    })
   )
-);
-app.use(
-  cors(
-    NODE_ENV === "development"
-      ? {
-          credentials: true,
-          origin: ["http://localhost:5173", "http://localhost:3111"],
-        }
-      : {
-          credentials: true,
-          origin: ["https://keeper.pnath.in"],
-        }
-  )
-);
-app.use((req, res, next) => {
-  res.header("X-Powered-By", "API Gateway @pnath.in");
-  next();
-});
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
-app.use(cookieParser());
+  .onRequest((context) => {
+    context.store.requestStart = performance.now();
+    context.set.headers["X-Powered-By"] = "API Gateway @pnath.in";
+  })
+  .onAfterResponse((context) => {
+    const end = performance.now();
+    const responseTime = end - context.store.requestStart;
 
-app.use("/", router);
+    const contentLength = context.set.headers["content-length"] || "-";
 
-app.listen(PORT);
+    console.log(
+      `${PORT}|API-GATEWAY ${context.request.method} ${context.request.url} ${
+        context.set.status
+      } ${responseTime.toFixed(3)}ms - ${contentLength}`
+    );
+  })
+  // Routes
+  .use(authController)
+  .use(resourceController)
+  .get("/", () => ({ message: "API Gateway running" }))
+  .get("/test-log", () => {
+    console.log("Test route hit");
+    return { message: "Testing logger" };
+  })
+  .listen(PORT);
+
+console.log(`🦊 Server is running at http://localhost:${PORT}`);

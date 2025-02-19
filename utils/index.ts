@@ -1,14 +1,15 @@
-import { Response } from "express";
+import { Context } from "elysia";
 
 export function jsonError(
-  res: Response,
+  context: Context,
   status: number,
   msg?: string,
-  data?: object
+  data: object = {}
 ) {
-  return res.status(status).json({
+  context.set.status = status;
+  return {
     error: true,
     msg: typeof msg === "string" ? msg : "Server error!",
-    errorData: data !== undefined ? data : {},
-  });
+    errorData: data,
+  };
 }
