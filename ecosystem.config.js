@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "gateway",
-      script: "index.ts",
+      script: "./index.ts",
       interpreter: "/usr/bin/bun",
     },
   ],

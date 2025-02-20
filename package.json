@@ -3,7 +3,6 @@
   "version": "2.0.0",
   "description": "API Gateway powered by Bun and Elysia",
   "module": "index.ts",
-  "type": "module",
   "scripts": {
     "dev": "bun run --watch index.ts",
     "start": "bun run index.ts",
