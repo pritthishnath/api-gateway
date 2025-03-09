@@ -41,7 +41,7 @@ const resourceHandler = async (context: Context) => {
       url: targetUrl,
       headers: {
         "Content-Type": "application/json",
-        "authorization-token": cookie.at?.value || "",
+        "x-authorization-token": cookie.at?.value || "",
       },
       data: body,
     });
