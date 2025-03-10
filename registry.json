@@ -5,6 +5,7 @@
       "endpoints": {
         "login": { "url": "/login" },
         "register": { "url": "/register" },
+        "token": { "url": "/token" },
         "refresh": { "url": "/refresh" },
         "logout": { "url": "/logout" },
         "user": { "url": "/user" },
