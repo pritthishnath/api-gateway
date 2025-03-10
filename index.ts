@@ -16,8 +16,12 @@ new Elysia()
       credentials: true,
       origin:
         NODE_ENV === "development"
-          ? ["http://localhost:5173", "http://localhost:3111"]
-          : ["https://keeper.pnath.in"],
+          ? [
+              "http://localhost:5173",
+              "http://localhost:5174",
+              "http://localhost:3111",
+            ]
+          : ["https://keeper.pnath.in", "https://login.pnath.in"],
     })
   )
   .onRequest((context) => {
