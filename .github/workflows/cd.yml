@@ -42,4 +42,4 @@ jobs:
           script: |
             cd ${{ secrets.DIR_PATH }}
             git stash && git pull origin prod
-            sudo pm2 start
+            /home/ubuntu/.nvm/versions/node/v22.14.0/bin/pm2 start
